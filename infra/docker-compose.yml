@@ -1,0 +1,82 @@
+services:
+  # ----------------------------------------------------------------------------
+  # Redpanda Broker (Kafka-compatible)
+  # ----------------------------------------------------------------------------
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.2
+    container_name: agropulse-redpanda
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 512M
+      - --reserve-memory 0M
+      - --overprovisioned
+      - --node-id 0
+      - --check=false
+      - --kafka-addr PLAINTEXT://0.0.0.0:9092,OUTSIDE://0.0.0.0:9094
+      - --advertise-kafka-addr PLAINTEXT://redpanda:9092,OUTSIDE://localhost:9094
+      - --pandaproxy-addr 0.0.0.0:8082
+      - --advertise-pandaproxy-addr localhost:8082
+    ports:
+      - "9092:9092"
+      - "9094:9094"
+      - "8082:8082"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # Redpanda Console (Web UI para inspección de topics y mensajes)
+  # ----------------------------------------------------------------------------
+  console:
+    image: docker.redpanda.com/redpandadata/console:v2.5.2
+    container_name: agropulse-console
+    depends_on:
+      - redpanda
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_BROKERS: "redpanda:9092"
+
+  # ----------------------------------------------------------------------------
+  # Telemetry Simulator (Node.js Producer)
+  # Emite cada 3-8s a 'soil.moisture' y 'weather.tick'.
+  # Permite pausar ticks de un lote (stale simulation).
+  # ----------------------------------------------------------------------------
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    container_name: agropulse-simulator
+    depends_on:
+      - redpanda
+    environment:
+      KAFKA_BROKERS: "redpanda:9092"
+      TICK_INTERVAL_SEC: "5"
+      PAUSED_PLOT_IDS: "22222222-2222-2222-2222-222222222223" # Monte A pausado por defecto para simular stale
+      SIMULATOR_PORT: "4000"
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # Telemetry & Command Worker (Node.js Consumer & Actuator)
+  # Consume topics de Redpanda e inserta en Supabase con service_role.
+  # Procesa irrigation_commands en estado 'pending' y actualiza valves.
+  # ----------------------------------------------------------------------------
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: agropulse-worker
+    depends_on:
+      - redpanda
+    environment:
+      KAFKA_BROKERS: "redpanda:9092"
+      SUPABASE_URL: "${SUPABASE_URL:-https://your-project.supabase.co}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:-your-service-role-key}"
+      COMMAND_POLL_INTERVAL_MS: "1500"
+    restart: unless-stopped

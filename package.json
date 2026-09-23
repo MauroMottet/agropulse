@@ -1,0 +1,18 @@
+{
+  "name": "agropulse-workspace",
+  "version": "1.0.0",
+  "description": "AgroPulse - Plataforma de Monitoreo Hídrico y Riego IoT en Tiempo Real",
+  "private": true,
+  "scripts": {
+    "start:app": "npm --prefix apps/agropulse start",
+    "start:app:web": "npm --prefix apps/agropulse run web",
+    "start:app:android": "npm --prefix apps/agropulse run android",
+    "start:app:ios": "npm --prefix apps/agropulse run ios",
+    "start:simulator": "npm --prefix infra/simulator start",
+    "start:worker": "npm --prefix infra/worker start",
+    "docker:up": "docker compose -f infra/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker-compose.yml down",
+    "docker:logs": "docker compose -f infra/docker-compose.yml logs -f",
+    "typecheck": "npm --prefix apps/agropulse run typecheck"
+  }
+}

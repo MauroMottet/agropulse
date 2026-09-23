@@ -1,0 +1,19 @@
+{
+  "name": "agropulse-simulator",
+  "version": "1.0.0",
+  "description": "AgroPulse Telemetry Simulator for Redpanda/Kafka",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "dependencies": {
+    "kafkajs": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}
